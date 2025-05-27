@@ -78,73 +78,80 @@ exports.getcarouselByuser = async (req, res) => {
 
 
 exports.updatecarousel = async (req, res) => {
-    try {
-        const { user_id } = req.body;  
-        const fields = [];
-        const values = [];
-        let index = 1;
- 
-        if (!user_id) {
-            return res.status(400).json({
-                statusCode: 400,
-                message: 'User ID is required for updating'
-            });
-        }
+  try {
+    const { carousel_id, user_id } = req.body;
 
-        
-        const carouselImage = req.files?.carousel_image?.[0]?.filename
-            ? `uploads/${req.files.carousel_image[0].filename}`
-            : null;
-
-       
-        if (carouselImage) {
-            fields.push(`"carousel_image"=$${index++}`);
-            values.push(carouselImage);
-        }
-
-        values.push(user_id);  
-
-       
-        if (fields.length === 0) {
-            return res.status(400).json({
-                statusCode: 400,
-                message: 'No fields provided to update'
-            });
-        }
-
-      
-        const query = `
-            UPDATE public.tbl_carousel
-            SET ${fields.join(', ')}
-            WHERE "user_id"=$${index}
-            RETURNING *`;
-
-        const result = await pool.query(query, values);
-
-      
-        if (result.rowCount === 0) {
-            return res.status(404).json({
-                statusCode: 404,
-                message: 'Carousel image not found'
-            });
-        }
-
-        // Success response
-        res.status(200).json({
-            statusCode: 200,
-            message: 'Carousel updated successfully',
-            carousel: result.rows[0],
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            statusCode: 500,
-            message: 'Internal Server Error',
-        });
+    if (!carousel_id) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Carousel ID is required for updating',
+      });
     }
-};
 
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    const allowedMimeTypes = ['image/png', 'image/jpg', 'image/jpeg', 'application/pdf'];
+    const file = req.files?.carousel_image?.[0];
+
+    if (file && !allowedMimeTypes.includes(file.mimetype)) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Invalid file type. Only PNG, JPG, JPEG, and PDF files are allowed.',
+      });
+    }
+
+    if (file?.filename) {
+      const imagePath = `uploads/${file.filename}`;
+      fields.push(`"carousel_image" = $${index++}`);
+      values.push(imagePath);
+    }
+
+    if (user_id) {
+      fields.push(`"user_id" = $${index++}`);
+      values.push(user_id);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'No fields provided to update',
+      });
+    }
+
+    values.push(carousel_id); // For WHERE clause
+
+    const query = `
+      UPDATE public.tbl_carousel
+      SET ${fields.join(', ')}
+      WHERE "carousel_id" = $${index}
+      RETURNING *;
+    `;
+
+    const result = await pool.query(query, values);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: 'Carousel not found',
+      });
+    }
+
+    res.status(200).json({
+      statusCode: 200,
+      message: 'Carousel updated successfully',
+      carousel: result.rows[0],
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      statusCode: 500,
+      message: 'Internal Server Error',
+    });
+  }
+};
 
 exports.deleteCarousel = async (req, res) => {
     try {

@@ -13,6 +13,10 @@ router.get('/getalluser',userController.getAllUser);
 router.post('/getUserByid',userController.getUserbyId);
 router.post('/getuserprofile',userController.getUserProfile);
 router.post('/deleteUser',userController.deleteUser);
-
+router.post('/updateUser',upload.fields([
+    {name:'logo',maxCount:1},
+    {name:'brochure',maxCount:1},
+    ]),userController.updateUser);
+  
 
 module.exports = router;

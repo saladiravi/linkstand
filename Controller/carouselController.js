@@ -31,7 +31,9 @@ exports.getallCarousels = async (req, res) => {
       const allcarousels = await pool.query(`
         SELECT 
           u.user_name,
-          c.carousel_image
+          c.carousel_image,
+          c.carousel_id,
+          u.user_id
         FROM tbl_carousel c
         JOIN users u ON c.user_id = u.user_id
       `);

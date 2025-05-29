@@ -7,12 +7,12 @@ router.post('/addcarousel',upload.fields([
     {name:'carousel_image',maxCount:1}]),carouselcontroller.addCrousel);
 
  router.get('/getallcarousel',carouselcontroller.getallCarousels);
-// router.post('/getcarouselByid',carouselcontroller.getcarouselByid);
-// router.post('/updateCarousel',upload.fields([
-//     {name:'carousel_image',maxCount:1}]),carouselcontroller.updatecarousel);
+router.post('/updateCarousel',upload.fields([
+    {name:'carousel_image',maxCount:1}]),carouselcontroller.updatecarousel);
 
 router.post('/deletecarousel',carouselcontroller.deleteCarousel) ;
 
+ 
 router.post('/getCorouselByuser',carouselcontroller.getcarouselByuser);
    
     

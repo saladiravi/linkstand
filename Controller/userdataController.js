@@ -35,6 +35,18 @@ exports.addUser = async (req, res) => {
   expiryDate.setFullYear(currentDate.getFullYear() + 1);
 
   try {
+
+     const checkUser = await pool.query(
+    'SELECT user_id FROM users WHERE user_name = $1',
+    [user_name]
+  );
+
+  if (checkUser.rows.length > 0) {
+    return res.status(400).json({
+      statusCode: 400,
+      message: 'Username already exists. Please choose another one.',
+    });
+  }
     // Initial insert
     const result = await pool.query(
       `INSERT INTO users (
@@ -67,7 +79,7 @@ exports.addUser = async (req, res) => {
     const userName = newUser.user_name;
 
     // Generate QR Code and URL
-    const qrData = `https://linkstand.in/${userName}`;
+    const qrData = `https://digispheretech.in/linkstand/${userName}`;
     const qrCodePath = `uploads/qrcode_${userId}.png`;
 
     await QRCode.toFile(qrCodePath, qrData, { width: 300 });
@@ -144,25 +156,28 @@ exports.getUserbyId = async (req, res) => {
 
  // Controller
 exports.getUserProfile = async (req, res) => {
-  const { user_name, user_id } = req.body;
+  const { user_name } = req.body;
 
   try {
     const userResult = await pool.query(
-      `SELECT * FROM users WHERE user_id = $1 AND user_name = $2`,
-      [user_id, user_name]
+      `SELECT * FROM users WHERE user_name = $1`,
+      [user_name]
     );
 
     if (userResult.rowCount === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const user = userResult.rows[0];
+    const userId = user.user_id;
+
     const carouselResult = await pool.query(
       `SELECT * FROM tbl_carousel WHERE user_id = $1`,
-      [user_id]
+      [userId]
     );
 
     res.status(200).json({
-      user: userResult.rows[0],
+      user,
       carousel: carouselResult.rows
     });
 
@@ -250,8 +265,8 @@ exports.updateUser = async (req, res) => {
     const fields = [];
     const values = [];
     let index = 1;
+    let newGenrateUrl = null;
 
-    // Set file path if uploaded
     if (brochureFile?.filename) {
       fields.push(`"brochure" = $${index++}`);
       values.push(`uploads/${brochureFile.filename}`);
@@ -269,6 +284,11 @@ exports.updateUser = async (req, res) => {
     if (user_name) {
       fields.push(`"user_name" = $${index++}`);
       values.push(user_name);
+
+      // Generate new URL if username changes
+      newGenrateUrl = `https://digispheretech.in/linkstand/${user_name}`;
+      fields.push(`"genrateurl" = $${index++}`);
+      values.push(newGenrateUrl);
     }
     if (review) {
       fields.push(`"review" = $${index++}`);
@@ -309,7 +329,7 @@ exports.updateUser = async (req, res) => {
     values.push(user_id); // for WHERE clause
 
     const query = `
-      UPDATE public.tbl_users
+      UPDATE public.users
       SET ${fields.join(', ')}
       WHERE "user_id" = $${index}
       RETURNING *;
